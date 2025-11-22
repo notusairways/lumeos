@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumeOS</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+
+    
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          extend: {
+            colors: {
+              primary: '#6750A4',
+              'primary-container': '#EADDFF',
+              secondary: '#625B71',
+              'secondary-container': '#E8DEF8',
+              tertiary: '#7D5260',
+              'tertiary-container': '#FFD8E4',
+              surface: '#FFFBFE',
+              'surface-variant': '#E7E0EC',
+              background: '#FFFBFE',
+              error: '#B3261E',
+            }
+          }
+        }
+      }
+    </script>
+
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      
+      .no-scroll {
+        overflow: hidden;
+      }
+
+      #boot-screen {
+        background: linear-gradient(270deg, #a0c4ff, #bdb2ff, #ffc6ff, #ffadad);
+        background-size: 800% 800%;
+        animation: gradientShift 15s ease infinite;
+      }
+      @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      #desktop {
+        background: linear-gradient(-45deg, #6750A4, #7D5260, #23a6d5, #EADDFF);
+        background-size: 400% 400%;
+        animation: desktopGradient 20s ease infinite;
+      }
+      
+      @keyframes desktopGradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      .wallpaper-sunset {
+        background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+        background-size: 400% 400%;
+        animation: desktopGradient 20s ease infinite;
+      }
+      .wallpaper-ocean {
+        background: linear-gradient(-45deg, #00c6ff, #0072ff);
+        background-size: 400% 400%;
+        animation: desktopGradient 10s ease infinite;
+      }
+      
+      @keyframes popIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .window {
+        min-width: 300px;
+        min-height: 200px;
+        resize: both;
+        overflow: auto;
+        animation: popIn 0.2s ease-out;
+      }
+
+      .window::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .window::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+      .window::-webkit-scrollbar-thumb {
+        background: #b0b0b0;
+        border-radius: 10px;
+      }
+      .window::-webkit-scrollbar-thumb:hover {
+        background: #808080;
+      }
+      
+      .window-header {
+        cursor: move;
+      }
+      
+      #launcher-menu {
+        opacity: 0;
+        transform: translateY(50px);
+        pointer-events: none;
+        transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+      }
+      #launcher-menu.launcher-visible {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+
+      .gradient-text {
+        background: linear-gradient(90deg, #EADDFF, #6750A4, #FFD8E4, #EADDFF);
+        background-size: 200% 200%;
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        animation: textGradient 5s ease infinite;
+      }
+      @keyframes textGradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .web-frame {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      .calc-btn {
+        background-color: #E8DEF8;
+        color: #625B71;
+        padding: 1rem;
+        border-radius: 1.5rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+        transition: background-color 0.2s;
+      }
+      .calc-btn:hover {
+        opacity: 0.9;
+      }
+      .calc-btn.op {
+        background-color: #FFD8E4;
+        color: #7D5260;
+      }
+      .calc-btn.clear {
+        background-color: #F9DEDC;
+        color: #B3261E;
+      }
+      .calc-btn.equals {
+        background-color: #6750A4;
+        color: #FFFFFF;
+      }
+    </style>
+</head>
+<body class="no-scroll h-screen bg-background text-zinc-900">
+
+    
+    <div id="boot-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center text-white">
+      <span class="material-icons-outlined text-8xl mb-4 animate-pulse">
+        auto_awesome
+      </span>
+      <h1 class="text-5xl font-bold gradient-text">LumeOS</h1>
+      <p class="mt-2 text-xl">Booting up...</p>
+    </div>
+
+    <div id="setup-screen" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-zinc-900/10 backdrop-blur-md">
+      <form id="setup-form" class="bg-surface p-8 rounded-2xl shadow-2xl w-full max-w-sm">
+        <span class="material-icons-outlined text-7xl text-primary mx-auto block text-center">
+          app_registration
+        </span>
+        <h2 class="text-3xl font-semibold mt-2 mb-4 text-center">Welcome to LumeOS</h2>
+        <p class="text-secondary text-center mb-6">Let's set up your account.</p>
+        
+        <div class="mb-4">
+          <label for="username-input" class="block text-sm font-medium text-secondary mb-1">Username</label>
+          <input type="text" id="username-input" class="w-full px-4 py-3 rounded-lg bg-surface-variant border-2 border-transparent focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="e.g., LumeUser" required>
+        </div>
+        
+        <div class="mb-6">
+          <label for="new-password-input" class="block text-sm font-medium text-secondary mb-1">Password</label>
+          <input type="password" id="new-password-input" class="w-full px-4 py-3 rounded-lg bg-surface-variant border-2 border-transparent focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Create a password" required>
+        </div>
+        
+        <button type="submit" class="w-full bg-primary text-white py-3 rounded-full font-semibold text-lg shadow-lg hover:bg-primary/90 transition duration-300 mt-4">
+          Complete Setup
+        </button>
+      </form>
+    </div>
+
+    <div id="login-screen" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-zinc-900/10 backdrop-blur-md">
+      <form id="login-form" class="bg-surface p-8 rounded-2xl shadow-2xl text-center w-full max-w-sm">
+        <span class="material-icons-outlined text-7xl text-primary">
+          account_circle
+        </span>
+        <h2 id="login-username" class="text-3xl font-semibold mt-2 mb-4">Welcome!</h2>
+        <p class="text-secondary mb-6">Enter password to unlock</p>
+        <input type="password" id="password-input" class="w-full px-4 py-3 rounded-lg bg-surface-variant border-2 border-transparent focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Password">
+        <p id="login-error" class="text-red-500 mt-2 h-6"></p>
+        <button type="submit" class="w-full bg-primary text-white py-3 rounded-full font-semibold text-lg shadow-lg hover:bg-primary/90 transition duration-300 mt-4">
+          Unlock
+        </button>
+        <button type="button" id="factory-reset-btn" class="w-full text-secondary text-sm py-3 rounded-full hover:bg-surface-variant transition duration-300 mt-2">
+          Forgot password? Factory Reset
+        </button>
+      </form>
+    </div>
+
+    <main id="desktop" class="hidden h-screen w-screen relative">
+      <div id="window-container" class="absolute inset-0 z-10">
+      </div>
+      
+      <div id="shelf" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-30">
+        <div class="flex items-center gap-2 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-lg shadow-xl rounded-full p-2">
+          <button id="launcher-button" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-black/10 transition-all">
+            <span class="material-icons-outlined text-2xl text-zinc-700 dark:text-zinc-200">
+              apps
+            </span>
+          </button>
+          
+          <div id="running-apps" class="flex gap-2"></div>
+          
+          <button id="system-tray-button" class="relative flex items-center justify-center w-24 h-12 rounded-full bg-black/5 dark:bg-white/5 px-4 hover:bg-black/10 dark:hover:bg-white/10 transition-all">
+            <span id="clock" class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">11:15 AM</span>
+          </button>
+        </div>
+      </div>
+    </main>
+    
+    <div id="calendar-popup" class="hidden absolute z-40 bg-surface dark:bg-zinc-800 rounded-2xl shadow-2xl border border-surface-variant w-80 p-4" 
+         style="bottom: 4.5rem; left: 50%; transform: translateX(-50%);">
+      <div id="calendar-header" class="flex items-center justify-between mb-4">
+        <button id="prev-month" class="p-1 rounded-full hover:bg-surface-variant">
+          <span class="material-icons-outlined">chevron_left</span>
+        </button>
+        <h3 id="month-year" class="font-semibold text-lg"></h3>
+        <button id="next-month" class="p-1 rounded-full hover:bg-surface-variant">
+          <span class="material-icons-outlined">chevron_right</span>
+        </button>
+      </div>
+      <div id="calendar-days" class="grid grid-cols-7 gap-1 text-center text-sm font-medium text-secondary mb-2">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div id="calendar-grid" class="grid grid-cols-7 gap-1">
+      </div>
+    </div>
+    
+    <div id="launcher-menu" class="fixed inset-0 z-20 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl p-8 pt-20">
+      <div class="max-w-4xl mx-auto">
+        <input type="text" id="launcher-search" placeholder="Search apps..." class="w-full p-4 rounded-full text-lg border-2 border-zinc-300 mb-8">
+        <div class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-4">
+          
+          <button class="app-icon flex flex-col items-center" data-app="FileExplorer">
+            <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">folder</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Files</span>
+          </button>
+          
+          <button class="app-icon flex flex-col items-center" data-app="TextPad">
+            <div class="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">edit_note</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Text Pad</span>
+          </button>
+
+          <button class="app-icon flex flex-col items-center" data-app="About">
+            <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">info</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">About</span>
+          </button>
+
+          <button class="app-icon flex flex-col items-center" data-app="Calculator">
+            <div class="w-16 h-16 bg-zinc-700 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">calculate</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Calculator</span>
+          </button>
+
+          <button class="app-icon flex flex-col items-center" data-app="Settings">
+            <div class="w-16 h-16 bg-zinc-500 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">settings</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Settings</span>
+          </button>
+
+          <button class="app-icon flex flex-col items-center" data-app="LumeSearch">
+            <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">search</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Lume Search</span>
+          </button>
+
+          <button class="app-icon flex flex-col items-center" data-app="Maps">
+            <div class="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">map</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Maps</span>
+          </button>
+          
+          <button class="app-icon flex flex-col items-center" data-app="LumeOSIDE">
+            <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">code</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">IDE</span>
+          </button>
+          
+          <button class="app-icon flex flex-col items-center" data-app="Minecraft">
+            <div class="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">sports_esports</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Minecraft</span>
+          </button>
+          
+          <button class="app-icon flex flex-col items-center" data-app="LumeMediaCenter">
+            <div class="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">movie</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Media</span>
+          </button>
+          
+          <button class="app-icon flex flex-col items-center" data-app="Weather">
+            <div class="w-16 h-16 bg-yellow-400 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">wb_sunny</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Weather</span>
+          </button>
+          
+          <button class="app-icon flex flex-col items-center" data-app="PDFReader">
+            <div class="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">picture_as_pdf</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">PDF Reader</span>
+          </button>
+          
+          <!-- ADDED: App Icon: Konterball -->
+          <button class="app-icon flex flex-col items-center" data-app="Konterball">
+            <div class="w-16 h-16 bg-blue-400 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">sports_tennis</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Konterball</span>
+          </button>
+          
+          <!-- ADDED: App Icon: Origami Simulator -->
+          <button class="app-icon flex flex-col items-center" data-app="OrigamiSimulator">
+            <div class="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">gesture</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Origami</span>
+          </button>
+          
+          <!-- ADDED: App Icon: Lume Doodles -->
+          <button class="app-icon flex flex-col items-center" data-app="LumeDoodles">
+            <div class="w-16 h-16 bg-teal-500 rounded-2xl flex items-center justify-center shadow-md">
+              <span class="material-icons-outlined text-white text-4xl">brush</span>
+            </div>
+            <span class="mt-2 text-sm text-zinc-800 dark:text-zinc-200">Doodles</span>
+          </button>
+          
+        </div>
+      </div>
+    </div>
+
+
+    
+    <template id="template-FileExplorer">
+      <div class="flex flex-col h-full">
+        <h3 class="text-xl font-medium p-4 border-b border-surface-variant">File Explorer</h3>
+        <div class="flex-grow p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="md:col-span-1 h-full overflow-y-auto bg-surface-variant rounded-lg p-2">
+            <h4 class="font-semibold mb-2 p-2">My Files</h4>
+            <div class="file-list flex flex-col gap-1">
+              <p class="text-sm text-zinc-500 p-2">No files yet.</p>
+            </div>
+          </div>
+          <div class="md:col-span-2 flex flex-col gap-4">
+            <input type="text" class="file-name-input w-full p-3 border-none bg-surface-variant rounded-lg focus:ring-2 focus:ring-primary focus:outline-none" placeholder="Enter file name (e.g., note.txt)">
+            <textarea class="file-content-input w-full h-48 flex-grow p-3 border-none bg-surface-variant rounded-lg focus:ring-2 focus:ring-primary focus:outline-none" placeholder="Type your file content here..."></textarea>
+            <input type="hidden" class="file-id-input">
+            <button class="save-file-btn bg-primary text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-primary/90 transition-all">Save New File</button>
+          </div>
+        </div>
+      </div>
+    </template>
+    
+    <template id="template-TextPad">
+      <div class="flex flex-col h-full">
+        <h3 class="text-xl font-medium p-4 border-b border-surface-variant">Text Pad</h3>
+        <textarea class="w-full h-full flex-grow p-4 border-none outline-none resize-none bg-surface" placeholder="Start typing..."></textarea>
+      </div>
+    </template>
+    
+    <template id="template-About">
+      <div class="p-6">
+        <h3 class="text-2xl font-bold text-primary mb-2">LumeOS</h3>
+        <p class="text-lg mb-4">Version 2.0</p>
+        <p>A simple web-based OS simulation built entirely in one HTML file, using Tailwind CSS for styling and JavaScript for window management and IndexedDB storage.</p>
+        <p class="mt-4">Created to demonstrate the power of modern web technologies!</p>
+      </div>
+    </template>
+
+    <template id="template-Calculator">
+      <div class="flex flex-col h-full bg-surface">
+        <div class="window-content-inner h-full flex flex-col">
+          <div class="p-4 text-right bg-surface-variant">
+            <div class="calc-display text-5xl font-mono text-zinc-900 mb-2" style="word-wrap: break-word;">0</div>
+          </div>
+          <div class="calc-buttons flex-grow p-4">
+            <div class="grid grid-cols-4 gap-3">
+              <button class="calc-btn clear" data-key="clear">C</button>
+              <button class="calc-btn op" data-key="negate">+/-</button>
+              <button class="calc-btn op" data-key="percent">%</button>
+              <button class="calc-btn op" data-key="/">/</button>
+              <button class="calc-btn" data-key="7">7</button>
+              <button class="calc-btn" data-key="8">8</button>
+              <button class="calc-btn" data-key="9">9</button>
+              <button class="calc-btn op" data-key="*">x</button>
+              <button class="calc-btn" data-key="4">4</button>
+              <button class="calc-btn" data-key="5">5</button>
+              <button class="calc-btn" data-key="6">6</button>
+              <button class="calc-btn op" data-key="-">-</button>
+              <button class="calc-btn" data-key="1">1</button>
+              <button class="calc-btn" data-key="2">2</button>
+              <button class="calc-btn" data-key="3">3</button>
+              <button class="calc-btn op" data-key="+">+</button>
+              <button class="calc-btn" style="grid-column: 1 / span 2;" data-key="0">0</button>
+              <button class="calc-btn" data-key=".">.</button>
+              <button class="calc-btn equals" data-key="=">=</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+    
+    <template id="template-Settings">
+      <div class="p-6">
+        <h3 class="text-xl font-medium mb-6">Settings</h3>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between p-3 rounded-lg hover:bg-surface-variant cursor-pointer" id="dark-mode-toggle-container">
+            <div>
+              <label class="font-medium">Dark Mode</label>
+              <p class="text-sm text-secondary">Toggle light or dark theme</p>
+            </div>
+            <div class="w-14 h-8 rounded-full bg-surface-variant p-1 flex items-center transition-all duration-300" id="dark-mode-toggle">
+              <div class="w-6 h-6 rounded-full bg-zinc-500 shadow" id="dark-mode-nub"></div>
+            </div>
+          </div>
+          <div class="p-3 rounded-lg">
+            <div>
+              <label class="font-medium">Wallpaper</label>
+              <p class="text-sm text-secondary mb-3">Change desktop background</p>
+            </div>
+            <div class="flex gap-4">
+              <button class="wallpaper-option w-16 h-16 rounded-lg border-2 border-primary" data-wallpaper="default" style="background: linear-gradient(-45deg, #6750A4, #7D5260, #23a6d5, #EADDFF);"></button>
+              <button class="wallpaper-option w-16 h-16 rounded-lg border-2 border-transparent" data-wallpaper="sunset" style="background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);"></button>
+              <button class="wallpaper-option w-16 h-16 rounded-lg border-2 border-transparent" data-wallpaper="ocean" style="background: linear-gradient(-45deg, #00c6ff, #0072ff);"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template id="template-LumeSearch">
+      <div class="flex flex-col h-full items-center justify-center p-6 bg-surface">
+        <span class="material-icons-outlined text-8xl mb-4 text-primary">
+          auto_awesome
+        </span>
+        <h3 class="text-4xl font-bold mb-6">Lume Search</h3>
+        <form action="https://www.google.com/search" method="GET" target="_blank" class="w-full max-w-lg flex shadow-lg rounded-full">
+          <input type="text" name="q" class="w-full p-4 rounded-l-full text-lg border-2 border-surface-variant focus:border-primary focus:outline-none" placeholder="Search the web...">
+          <button type="submit" class="bg-primary text-white p-4 rounded-r-full hover:bg-primary/90 transition-all">
+            <span class="material-icons-outlined">search</span>
+          </button>
+        </form>
+        <p class="text-secondary mt-4 text-sm">Results will open in a new tab.</p>
+      </div>
+    </template>
+
+    <template id="template-Maps">
+      <div class="flex flex-col h-full">
+        <iframe class="web-frame flex-grow" 
+          src="https://www.openstreetmap.org/export/embed.html?bbox=-73.93807411193849%2C40.58443062803236%2C-73.91412734985353%2C40.5932950583961&amp;layer=mapnik"
+          sandbox="allow-scripts allow-popups allow-same-origin">
+        </iframe>
+        <small class="p-2 text-center bg-surface-variant">
+          <a href="https://www.openstreetmap.org/?#map=16/40.58886/-73.92610" target="_blank" class="text-primary hover:underline">View Larger Map</a>
+        </small>
+      </div>
+    </template>
+
+    <template id="template-LumeOSIDE">
+      <div id="monaco-editor-container" class="w-full h-full"></div>
+    </template>
+
+    <template id="template-Minecraft">
+      <iframe class="web-frame" 
+        src="https://eaglercraft.q13x.com/1.8-wasm/?retina=true"
+        sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-top-navigation-by-user-activation">
+      </iframe>
+    </template>
+
+    <template id="template-LumeMediaCenter">
+      <div class="flex flex-col h-full bg-surface p-4">
+        <h3 class="text-xl font-medium mb-4">Lume Media Center</h3>
+        <div class="media-display flex-grow flex flex-col items-center justify-center bg-surface-variant rounded-lg">
+          <span class="material-icons-outlined text-9xl text-primary-container">perm_media</span>
+          <p class="media-title text-lg font-medium mt-4 text-secondary">No media loaded</p>
+        </div>
+        <div class="mt-4">
+          <label for="file-upload" class="w-full text-center block bg-primary text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-primary/90 transition-all cursor-pointer">
+            Load Media File
+          </label>
+          <input type="file" id="file-upload" class="hidden" accept="image/png,image/jpeg,image/webp,audio/mpeg,audio/wav,audio/flac,video/mp4,video/quicktime">
+        </div>
+      </div>
+    </template>
+
+    <template id="template-Weather">
+      <a class="weatherwidget-io" href="https://forecast7.com/en/40d71n74d01/new-york/" data-label_1="NEW YORK" data-label_2="WEATHER" data-theme="original" >NEW YORK WEATHER</a>
+    </template>
+
+    <template id="template-PDFReader">
+      <div class="flex flex-col h-full bg-surface">
+        <div class="pdf-display-area flex-grow flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+          <p class="text-secondary">Please load a PDF file to view it.</p>
+        </div>
+        <div class="p-4 border-t border-surface-variant">
+          <label for="pdf-file-upload" class="w-full text-center block bg-primary text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-primary/90 transition-all cursor-pointer">
+            Load PDF File
+          </label>
+          <input type="file" id="pdf-file-upload" class="hidden" accept="application/pdf">
+        </div>
+      </div>
+    </template>
+
+    <!-- ADDED: Template for Konterball -->
+    <template id="template-Konterball">
+      <iframe class="web-frame" 
+        src="https://konterball.com/"
+        style="border:0;" 
+        allowfullscreen 
+        referrerpolicy="strict-origin-when-cross-origin"
+        allow="pointer-lock">
+      </iframe>
+    </template>
+    
+    <!-- ADDED: Template for Origami Simulator -->
+    <template id="template-OrigamiSimulator">
+      <iframe class="web-frame" 
+        src="https://origamisimulator.org/"
+        style="border:0;" 
+        allowfullscreen 
+        referrerpolicy="strict-origin-when-cross-origin"
+        allow="xr-spatial-tracking vr">
+      </iframe>
+    </template>
+    
+    <!-- ADDED: Template for Lume Doodles -->
+    <template id="template-LumeDoodles">
+      <div class="flex flex-col h-full bg-surface">
+        <!-- Toolbar -->
+        <div class="flex items-center gap-2 p-2 border-b border-surface-variant flex-wrap">
+          <button class="doodle-tool p-2 rounded-full bg-secondary-container" data-tool="pencil" title="Pencil">
+            <span class="material-icons-outlined">edit</span>
+          </button>
+          <button class="doodle-tool p-2 rounded-full hover:bg-surface-variant" data-tool="eraser" title="Eraser">
+            <span class="material-icons-outlined">auto_fix_normal</span>
+          </button>
+          <input type="color" id="doodle-color" class="w-10 h-10 rounded-full overflow-hidden border-none cursor-pointer" value="#6750A4" title="Color Picker">
+          <input type="range" id="doodle-size" min="1" max="50" value="5" class="w-24 cursor-pointer" title="Brush Size">
+          <button id="doodle-fill" class="p-2 rounded-full hover:bg-surface-variant" title="Set Background">
+            <span class="material-icons-outlined">format_color_fill</span>
+          </button>
+          <label for="doodle-image-upload" class="p-2 rounded-full hover:bg-surface-variant cursor-pointer" title="Add Image">
+            <span class="material-icons-outlined">image</span>
+          </label>
+          <input type="file" id="doodle-image-upload" class="hidden" accept="image/*">
+          <button id="doodle-clear" class="p-2 rounded-full hover:bg-surface-variant" title="Clear All">
+            <span class="material-icons-outlined">delete_sweep</span>
+          </button>
+          <button id="doodle-download" class="p-2 rounded-full hover:bg-surface-variant" title="Download">
+            <span class="material-icons-outlined">download</span>
+          </button>
+        </div>
+        <!-- Canvas Area -->
+        <div class="flex-grow p-2 bg-zinc-100 dark:bg-zinc-800" style="overflow: auto;">
+          <canvas id="doodle-canvas" width="800" height="600" class="bg-white shadow-md rounded-lg"></canvas>
+        </div>
+      </div>
+    </template>
+    
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        
+        const bootScreen = document.getElementById('boot-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const desktop = document.getElementById('desktop');
+        const loginForm = document.getElementById('login-form');
+        const passwordInput = document.getElementById('password-input');
+        const loginError = document.getElementById('login-error');
+        const factoryResetBtn = document.getElementById('factory-reset-btn');
+        const shelf = document.getElementById('shelf');
+        const clockElement = document.getElementById('clock');
+        const launcherButton = document.getElementById('launcher-button');
+        const launcherMenu = document.getElementById('launcher-menu');
+        const launcherSearch = document.getElementById('launcher-search');
+        const windowContainer = document.getElementById('window-container');
+        
+        const systemTrayButton = document.getElementById('system-tray-button');
+        const calendarPopup = document.getElementById('calendar-popup');
+        const monthYearEl = document.getElementById('month-year');
+        const calendarGrid = document.getElementById('calendar-grid');
+        const prevMonthBtn = document.getElementById('prev-month');
+        const nextMonthBtn = document.getElementById('next-month');
+        let calendarDate = new Date();
+
+        const setupScreen = document.getElementById('setup-screen');
+        const setupForm = document.getElementById('setup-form');
+        const usernameInput = document.getElementById('username-input');
+        const newPasswordInput = document.getElementById('new-password-input');
+        const loginUsername = document.getElementById('login-username');
+
+        let db;
+        
+        function initDB() {
+          const request = indexedDB.open('LumeOS_FileSystem', 2);
+
+          request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains('files')) {
+              const objectStore = db.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
+              objectStore.createIndex('name', 'name', { unique: false });
+            }
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings', { keyPath: 'id' });
+            }
+            console.log('Database upgraded successfully.');
+          };
+
+          request.onsuccess = (event) => {
+            db = event.target.result;
+            console.log('Database opened successfully.');
+            checkSetup();
+          };
+
+          request.onerror = (event) => {
+            console.error('Database error: ', event.target.errorCode);
+          };
+        }
+        
+        function checkSetup() {
+          if (!db) return;
+          const transaction = db.transaction(['settings'], 'readonly');
+          const objectStore = transaction.objectStore('settings');
+          const getRequest = objectStore.get('userProfile');
+          
+          getRequest.onsuccess = () => {
+            const userProfile = getRequest.result;
+            if (userProfile) {
+              loginUsername.textContent = `Welcome, ${userProfile.username}!`;
+              startBoot(true);
+            } else {
+              startBoot(false);
+            }
+          };
+          getRequest.onerror = () => {
+            startBoot(false);
+          };
+        }
+
+        setupForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const username = usernameInput.value;
+          const password = newPasswordInput.value;
+          
+          if (!username || !password) {
+            console.error("Username or password missing.");
+            return;
+          }
+          
+          const userProfile = {
+            id: 'userProfile',
+            username: username,
+            password: password,
+            darkMode: false,
+            wallpaper: 'default'
+          };
+          
+          const transaction = db.transaction(['settings'], 'readwrite');
+          const objectStore = transaction.objectStore('settings');
+          const putRequest = objectStore.put(userProfile);
+          
+          putRequest.onsuccess = () => {
+            setupScreen.classList.add('hidden');
+            loginUsername.textContent = `Welcome, ${username}!`;
+            loginScreen.classList.remove('hidden');
+          };
+          putRequest.onerror = (e) => {
+            console.error('Error saving settings:', e);
+          };
+        });
+
+        function startBoot(showLogin) {
+          setTimeout(() => {
+            bootScreen.classList.add('hidden');
+            if (showLogin) {
+              loginScreen.classList.remove('hidden');
+            } else {
+              setupScreen.classList.remove('hidden');
+            }
+          }, 2000);
+        }
+
+        loginForm.addEventListener('submit', (e) => {
+          e.preventDefault(); 
+          const password = passwordInput.value;
+          
+          const transaction = db.transaction(['settings'], 'readonly');
+          const objectStore = transaction.objectStore('settings');
+          const getRequest = objectStore.get('userProfile');
+          
+          getRequest.onsuccess = () => {
+            const userProfile = getRequest.result;
+            if (userProfile && userProfile.password === password) {
+              loginScreen.classList.add('hidden');
+              desktop.classList.remove('hidden');
+              loadUserSettings(userProfile);
+              startClock();
+            } else {
+              loginError.textContent = 'Incorrect password. Try again.';
+              passwordInput.value = '';
+            }
+          };
+          getRequest.onerror = () => {
+            loginError.textContent = 'Error reading user data.';
+          };
+        });
+
+        factoryResetBtn.addEventListener('click', () => {
+            console.log("Factory Reset initiated...");
+            
+            if (!db) {
+                console.error("Database not initialized, cannot reset.");
+                return;
+            }
+
+            const transaction = db.transaction(['settings', 'files'], 'readwrite');
+            const settingsStore = transaction.objectStore('settings');
+            const filesStore = transaction.objectStore('files');
+            
+            const clearSettings = settingsStore.clear();
+            const clearFiles = filesStore.clear();
+
+            let settingsCleared = false;
+            let filesCleared = false;
+
+            const onClear = () => {
+                if (settingsCleared && filesCleared) {
+                    console.log("All data cleared. Rebooting...");
+                    
+                    loginScreen.classList.add('hidden');
+                    desktop.classList.add('hidden');
+                    calendarPopup.classList.add('hidden');
+                    
+                    bootScreen.classList.remove('hidden');
+                    
+                    startBoot(false); 
+                }
+            };
+
+            clearSettings.onsuccess = () => {
+                settingsCleared = true;
+                console.log("Settings cleared.");
+                onClear();
+            };
+            clearSettings.onerror = (e) => {
+                console.error("Error clearing settings:", e);
+            };
+
+            clearFiles.onsuccess = () => {
+                filesCleared = true;
+                console.log("Files cleared.");
+                onClear();
+            };
+            clearFiles.onerror = (e) => {
+                console.error("Error clearing files:", e);
+            };
+        });
+
+        function loadUserSettings(userProfile) {
+          if (userProfile.darkMode) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+          
+          updateWallpaper(userProfile.wallpaper, false);
+        }
+
+        function startClock() {
+          function updateTime() {
+            const now = new Date();
+            const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            clockElement.textContent = time;
+          }
+          updateTime();
+          setInterval(updateTime, 1000);
+        }
+
+        launcherButton.addEventListener('click', () => {
+          launcherMenu.classList.toggle('launcher-visible');
+        });
+
+        launcherSearch.addEventListener('input', (e) => {
+          const searchTerm = e.target.value.toLowerCase();
+          document.querySelectorAll('.app-icon').forEach(icon => {
+            const appName = icon.querySelectorAll('span')[1].textContent.toLowerCase();
+            if (appName.includes(searchTerm)) {
+              icon.style.display = 'flex';
+            } else {
+              icon.style.display = 'none';
+            }
+          });
+        });
+
+        document.querySelectorAll('.app-icon').forEach(icon => {
+          icon.addEventListener('click', () => {
+            const appName = icon.dataset.app;
+            openApp(appName);
+            launcherMenu.classList.remove('launcher-visible');
+          });
+        });
+        
+        function generateCalendar(year, month) {
+            calendarGrid.innerHTML = '';
+            const today = new Date();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDayOfWeek = firstDay.getDay();
+            
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            monthYearEl.textContent = `${monthNames[month]} ${year}`;
+
+            for (let i = 0; i < startDayOfWeek; i++) {
+                calendarGrid.insertAdjacentHTML('beforeend', '<div></div>');
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                let classes = 'text-center p-2 rounded-full cursor-pointer hover:bg-surface-variant';
+                
+                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                    classes += ' bg-primary text-white';
+                }
+                
+                calendarGrid.insertAdjacentHTML('beforeend', `<div class="${classes}">${day}</div>`);
+            }
+        }
+
+        systemTrayButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = calendarPopup.classList.toggle('hidden');
+            if (!isHidden) {
+                calendarDate = new Date();
+                generateCalendar(calendarDate.getFullYear(), calendarDate.getMonth());
+            }
+        });
+
+        prevMonthBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            calendarDate.setMonth(calendarDate.getMonth() - 1);
+            generateCalendar(calendarDate.getFullYear(), calendarDate.getMonth());
+        });
+
+        nextMonthBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            calendarDate.setMonth(calendarDate.getMonth() + 1);
+            generateCalendar(calendarDate.getFullYear(), calendarDate.getMonth());
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!calendarPopup.classList.contains('hidden') && !calendarPopup.contains(e.target)) {
+                calendarPopup.classList.add('hidden');
+            }
+        });
+        
+        let windowZIndex = 10;
+
+        function openApp(appName) {
+          
+          let template;
+          
+          template = document.getElementById(`template-${appName}`);
+          
+          if (!template) {
+            console.error(`Template for ${appName} not found!`);
+            return;
+          }
+          
+          const windowId = 'window-' + Date.now();
+
+          const newWindow = document.createElement('div');
+          newWindow.className = 'window absolute bg-surface rounded-lg shadow-2xl border border-surface-variant';
+          
+          if (appName === 'LumeOSIDE') {
+            newWindow.style.top = '10%';
+            newWindow.style.left = '10%';
+            newWindow.style.width = '70vw';
+            newWindow.style.height = '70vh';
+          } else {
+            newWindow.style.top = '25%';
+            newWindow.style.left = '25%';
+          }
+          
+          newWindow.style.zIndex = windowZIndex++;
+          newWindow.id = windowId;
+          
+          newWindow.innerHTML = `
+            <div class="window-header h-10 bg-surface-variant rounded-t-lg flex items-center justify-between px-3">
+              <span class="font-semibold text-sm">${appName}</span>
+              <div class="flex items-center gap-1">
+                <button class="minimize-btn p-1 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-600">
+                    <span class="material-icons-outlined text-base">remove</span>
+                </button>
+                <button class="maximize-btn p-1 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-600">
+                    <span class="material-icons-outlined text-base">fullscreen</span>
+                </button>
+                <button class="close-btn p-1 rounded-full hover:bg-red-500 hover:text-white dark:hover:bg-red-500">
+                    <span class="material-icons-outlined text-base">close</span>
+                </button>
+              </div>
+            </div>
+            <div class="window-content h-full" style="max-height: calc(100% - 2.5rem); overflow-y: auto;">
+              ${template.innerHTML}
+            </div>
+          `;
+          
+          windowContainer.appendChild(newWindow);
+          
+          const appIconMap = {
+            FileExplorer: 'folder',
+            TextPad: 'edit_note',
+            About: 'info',
+            Calculator: 'calculate',
+            Settings: 'settings',
+            LumeSearch: 'search',
+            Maps: 'map',
+            LumeOSIDE: 'code',
+            Minecraft: 'sports_esports',
+            LumeMediaCenter: 'movie',
+            Weather: 'wb_sunny',
+            PDFReader: 'picture_as_pdf',
+            Konterball: 'sports_tennis',
+            OrigamiSimulator: 'gesture',
+            LumeDoodles: 'brush' // ADDED
+          };
+          const iconName = appIconMap[appName] || 'apps';
+          
+          const runningAppIcon = document.createElement('button');
+          runningAppIcon.className = 'running-app-icon p-2 rounded-full hover:bg-black/10 text-zinc-700 dark:text-zinc-200';
+          runningAppIcon.dataset.windowId = windowId;
+          runningAppIcon.innerHTML = `<span class="material-icons-outlined text-2xl">${iconName}</span>`;
+          
+          runningAppIcon.addEventListener('click', () => {
+            const window = document.getElementById(windowId);
+            if (window) {
+                window.style.display = 'block';
+                window.style.zIndex = windowZIndex++;
+            }
+          });
+          
+          document.getElementById('running-apps').appendChild(runningAppIcon);
+          newWindow.runningAppIcon = runningAppIcon; 
+
+          makeDraggable(newWindow);
+
+          newWindow.querySelector('.close-btn').addEventListener('click', () => {
+            newWindow.remove();
+            if (newWindow.runningAppIcon) {
+                newWindow.runningAppIcon.remove();
+            }
+
+            const anyMaximized = document.querySelector('.window[data-is-maximized="true"]');
+            if (!anyMaximized) {
+                shelf.style.display = 'block';
+            }
+          });
+          
+          newWindow.querySelector('.minimize-btn').addEventListener('click', () => {
+            newWindow.style.display = 'none';
+          });
+          
+          newWindow.querySelector('.maximize-btn').addEventListener('click', () => {
+            if (newWindow.dataset.isMaximized) {
+              newWindow.style.width = newWindow.dataset.oldWidth || '50vw';
+              newWindow.style.height = newWindow.dataset.oldHeight || '50vh';
+              newWindow.style.top = newWindow.dataset.oldTop || '25%';
+              newWindow.style.left = newWindow.dataset.oldLeft || '25%';
+              newWindow.dataset.isMaximized = '';
+              newWindow.style.resize = 'both';
+              
+              const anyMaximized = document.querySelector('.window[data-is-maximized="true"]');
+              if (!anyMaximized) {
+                  shelf.style.display = 'block';
+              }
+
+            } else {
+              const rect = newWindow.getBoundingClientRect();
+              newWindow.dataset.oldWidth = newWindow.style.width;
+              newWindow.dataset.oldHeight = newWindow.style.height;
+              newWindow.dataset.oldTop = newWindow.style.top;
+              newWindow.dataset.oldLeft = newWindow.style.left;
+              
+              newWindow.style.width = '100%';
+              newWindow.style.height = '100%';
+              newWindow.style.top = '0';
+              newWindow.style.left = '0';
+              newWindow.dataset.isMaximized = 'true';
+              newWindow.style.resize = 'none';
+              shelf.style.display = 'none';
+            }
+          });
+
+          newWindow.addEventListener('mousedown', () => {
+            newWindow.style.zIndex = windowZIndex++;
+          });
+          
+          if (appName === 'FileExplorer') {
+            initFileExplorer(newWindow);
+          } else if (appName === 'Calculator') {
+            initCalculator(newWindow);
+          } else if (appName === 'Settings') {
+            initSettings(newWindow);
+          } else if (appName === 'LumeOSIDE') { 
+            initLumeOSIDE(newWindow);
+          } else if (appName === 'LumeMediaCenter') {
+            initLumeMediaCenter(newWindow);
+          } else if (appName === 'Weather') {
+            initWeather(newWindow);
+          } else if (appName === 'PDFReader') {
+            initPDFReader(newWindow);
+          } else if (appName === 'LumeDoodles') { // ADDED
+            initLumeDoodles(newWindow);
+          }
+          // No init needed for Konterball or OrigamiSimulator
+        }
+        
+        function makeDraggable(element) {
+          const header = element.querySelector('.window-header');
+          let isDragging = false;
+          let offsetX, offsetY;
+
+          header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            offsetX = e.clientX - element.getBoundingClientRect().left;
+            offsetY = e.clientY - element.getBoundingClientRect().top;
+            
+            element.style.zIndex = windowZIndex++;
+            
+            if (element.dataset.isMaximized) {
+              isDragging = false;
+              return;
+            }
+
+            document.body.style.userSelect = 'none';
+          });
+
+          document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            let newX = e.clientX - offsetX;
+            let newY = e.clientY - offsetY;
+            
+            element.style.left = `${newX}px`;
+            element.style.top = `${newY}px`;
+          });
+
+          document.addEventListener('mouseup', () => {
+            isDragging = false;
+            document.body.style.userSelect = 'auto';
+          });
+        }
+        
+        function initFileExplorer(windowEl) {
+          const fileList = windowEl.querySelector('.file-list');
+          const nameInput = windowEl.querySelector('.file-name-input');
+          const contentInput = windowEl.querySelector('.file-content-input');
+          const idInput = windowEl.querySelector('.file-id-input');
+          const saveBtn = windowEl.querySelector('.save-file-btn');
+          
+          function loadFiles() {
+            if (!db) {
+              fileList.innerHTML = '<p class="text-sm text-red-500">Database not ready.</p>';
+              return;
+            }
+            const transaction = db.transaction(['files'], 'readonly');
+            const objectStore = transaction.objectStore('files');
+            const request = objectStore.getAll();
+            
+            request.onsuccess = () => {
+              const files = request.result;
+              fileList.innerHTML = '';
+              if (files.length === 0) {
+                fileList.innerHTML = '<p class="text-sm text-zinc-500">No files yet.</p>';
+              } else {
+                files.forEach(file => {
+                  const fileEl = document.createElement('div');
+                  fileEl.className = 'flex justify-between items-center p-2 rounded-lg hover:bg-secondary-container cursor-pointer';
+                  fileEl.innerHTML = `
+                    <span class="file-name font-medium text-sm">${file.name}</span>
+                    <button class="delete-file-btn text-error" data-id="${file.id}">
+                      <span class="material-icons-outlined text-lg">delete</span>
+                    </button>
+                  `;
+                  
+                  fileEl.querySelector('.file-name').addEventListener('click', () => {
+                    nameInput.value = file.name;
+                    contentInput.value = file.content;
+                    idInput.value = file.id;
+                    saveBtn.textContent = 'Save Changes';
+                  });
+                  
+                  fileEl.querySelector('.delete-file-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteFile(file.id);
+                  });
+                  
+                  fileList.appendChild(fileEl);
+                });
+              }
+            };
+          }
+          
+          saveBtn.addEventListener('click', () => {
+            const name = nameInput.value;
+            const content = contentInput.value;
+            const id = idInput.value ? parseInt(idInput.value) : null;
+            
+            if (!name) {
+              console.error("Please enter a file name.");
+              return;
+            }
+            
+            const transaction = db.transaction(['files'], 'readwrite');
+            const objectStore = transaction.objectStore('files');
+            
+            const fileData = { name, content, timestamp: new Date() };
+            
+            let request;
+            if (id) {
+              fileData.id = id;
+              request = objectStore.put(fileData);
+            } else {
+              request = objectStore.add(fileData);
+            }
+
+            request.onsuccess = () => {
+              nameInput.value = '';
+              contentInput.value = '';
+              idInput.value = '';
+              saveBtn.textContent = 'Save New File';
+              loadFiles();
+            };
+            
+            request.onerror = (err) => {
+              console.error('Error saving file:', err);
+            };
+          });
+          
+          function deleteFile(id) {
+            const transaction = db.transaction(['files'], 'readwrite');
+            const objectStore = transaction.objectStore('files');
+            const request = objectStore.delete(id);
+            
+            request.onsuccess = () => {
+              if (idInput.value == id) {
+                nameInput.value = '';
+                contentInput.value = '';
+                idInput.value = '';
+                saveBtn.textContent = 'Save New File';
+              }
+              loadFiles();
+            };
+          }
+          
+          loadFiles();
+        }
+        
+        function initCalculator(windowEl) {
+          const display = windowEl.querySelector('.calc-display');
+          const buttons = windowEl.querySelector('.calc-buttons');
+          
+          let currentValue = '0';
+          let previousValue = null;
+          let operator = null;
+          let waitingForSecondValue = false;
+
+          function updateDisplay() {
+            display.textContent = currentValue;
+          }
+
+          buttons.addEventListener('click', (e) => {
+            if (!e.target.matches('.calc-btn')) return;
+            
+            const key = e.target.dataset.key;
+
+            if (/\d/.test(key)) {
+              if (waitingForSecondValue) {
+                currentValue = key;
+                waitingForSecondValue = false;
+              } else {
+                currentValue = currentValue === '0' ? key : currentValue + key;
+              }
+            } else if (key === '.') {
+              if (!currentValue.includes('.')) {
+                currentValue += '.';
+              }
+            } else if (key === '+' || key === '-' || key === '*' || key === '/') {
+              if (operator && !waitingForSecondValue) {
+                calculate();
+              }
+              previousValue = parseFloat(currentValue);
+              operator = key;
+              waitingForSecondValue = true;
+            } else if (key === '=') {
+              if (operator) {
+                calculate();
+                operator = null;
+                waitingForSecondValue = false;
+              }
+            } else if (key === 'clear') {
+              currentValue = '0';
+              previousValue = null;
+              operator = null;
+              waitingForSecondValue = false;
+            } else if (key === 'negate') {
+              currentValue = (parseFloat(currentValue) * -1).toString();
+            } else if (key === 'percent') {
+              currentValue = (parseFloat(currentValue) / 100).toString();
+            }
+
+            updateDisplay();
+          });
+
+          function calculate() {
+            if (previousValue === null || operator === null) return;
+            const current = parseFloat(currentValue);
+            const prev = previousValue;
+            let result;
+
+            switch (operator) {
+              case '+': result = prev + current; break;
+              case '-': result = prev - current; break;
+              case '*': result = prev * current; break;
+              case '/': result = prev / current; break;
+              default: return;
+            }
+            
+            currentValue = result.toString();
+            previousValue = null;
+          }
+
+          updateDisplay();
+        }
+
+        function initSettings(windowEl) {
+          const toggle = windowEl.querySelector('#dark-mode-toggle-container'); 
+          const nub = windowEl.querySelector('#dark-mode-nub');
+          const wallpaperOptions = windowEl.querySelectorAll('.wallpaper-option');
+          
+          const transaction = db.transaction(['settings'], 'readonly');
+          const store = transaction.objectStore('settings');
+          const getRequest = store.get('userProfile');
+          
+          getRequest.onsuccess = () => {
+            const userProfile = getRequest.result;
+            
+            if (userProfile.darkMode) {
+              const toggleDiv = windowEl.querySelector('#dark-mode-toggle');
+              toggleDiv.classList.add('bg-primary');
+              nub.style.transform = 'translateX(1.5rem)';
+            } else {
+              const toggleDiv = windowEl.querySelector('#dark-mode-toggle');
+              toggleDiv.classList.remove('bg-primary');
+              nub.style.transform = 'translateX(0rem)';
+            }
+            
+            wallpaperOptions.forEach(opt => {
+              if (opt.dataset.wallpaper === userProfile.wallpaper) {
+                opt.classList.add('border-primary');
+                opt.classList.remove('border-transparent');
+              } else {
+                opt.classList.remove('border-primary');
+                opt.classList.add('border-transparent');
+              }
+            });
+          };
+
+          toggle.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            const toggleDiv = windowEl.querySelector('#dark-mode-toggle');
+            if (isDark) {
+              toggleDiv.classList.add('bg-primary');
+              nub.style.transform = 'translateX(1.5rem)';
+            } else {
+              toggleDiv.classList.remove('bg-primary');
+              nub.style.transform = 'translateX(0rem)';
+            }
+            saveSetting('darkMode', isDark);
+          });
+          
+          wallpaperOptions.forEach(button => {
+            button.addEventListener('click', () => {
+              const wallpaperName = button.dataset.wallpaper;
+              wallpaperOptions.forEach(opt => {
+                opt.classList.add('border-transparent');
+                opt.classList.remove('border-primary');
+              });
+              button.classList.remove('border-transparent');
+              button.classList.add('border-primary');
+              
+              updateWallpaper(wallpaperName, true);
+            });
+          });
+        }
+        
+        function saveSetting(key, value) {
+          const transaction = db.transaction(['settings'], 'readwrite');
+          const store = transaction.objectStore('settings');
+          const getRequest = store.get('userProfile');
+          
+          getRequest.onsuccess = () => {
+            const userProfile = getRequest.result;
+            userProfile[key] = value;
+            store.put(userProfile);
+          };
+        }
+        
+        function updateWallpaper(wallpaperName, doSave) {
+          desktop.classList.remove('wallpaper-sunset', 'wallpaper-ocean');
+          if (wallpaperName === 'sunset') {
+            desktop.classList.add('wallpaper-sunset');
+          } else if (wallpaperName === 'ocean') {
+            desktop.classList.add('wallpaper-ocean');
+          }
+          if (doSave) {
+            saveSetting('wallpaper', wallpaperName);
+          }
+        }
+
+        function initLumeOSIDE(windowEl) {
+          const editorContainer = windowEl.querySelector('#monaco-editor-container');
+          if (!editorContainer) { 
+            console.error("Monaco container not found!"); 
+            return; 
+          }
+
+          if (typeof require === 'undefined') {
+              console.error("Monaco loader.js did not load.");
+              editorContainer.innerHTML = "<p class='p-4 text-error'>Error: Could not load code editor dependencies.</p>";
+              return;
+          }
+          
+          require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
+          
+          let editor;
+          let themeObserver;
+
+          require(['vs/editor/editor.main'], function() {
+            if (!document.getElementById(windowEl.id)) return;
+
+            editor = monaco.editor.create(editorContainer, {
+              value: [
+                '// Welcome to LumeOS IDE!',
+                'function hello() {',
+                '\tconsole.log("Hello, LumeOS!");',
+                '}'
+              ].join('\n'),
+              language: 'javascript',
+              theme: document.documentElement.classList.contains('dark') ? 'vs-dark' : 'vs',
+              automaticLayout: true,
+            });
+
+            themeObserver = new MutationObserver((mutations) => {
+              mutations.forEach(mutation => {
+                if (mutation.attributeName === 'class' && editor) {
+                  const isDark = document.documentElement.classList.contains('dark');
+                  monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs');
+                }
+              });
+            });
+            themeObserver.observe(document.documentElement, { attributes: true });
+          });
+
+          windowEl.querySelector('.close-btn').addEventListener('click', () => {
+            if (themeObserver) {
+              themeObserver.disconnect();
+            }
+            if (editor) {
+              editor.dispose();
+            }
+          });
+        }
+
+        function initLumeMediaCenter(windowEl) {
+          const fileInput = windowEl.querySelector('#file-upload');
+          const fileLabel = windowEl.querySelector('label[for="file-upload"]');
+          const mediaDisplay = windowEl.querySelector('.media-display');
+          const mediaTitle = windowEl.querySelector('.media-title');
+          
+          const uniqueId = 'file-upload-' + Date.now();
+          fileInput.id = uniqueId;
+          fileLabel.htmlFor = uniqueId;
+          
+          let currentObjectURL = null;
+
+          fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            
+            if (currentObjectURL) {
+              URL.revokeObjectURL(currentObjectURL);
+              currentObjectURL = null;
+            }
+            mediaDisplay.innerHTML = '';
+
+            if (file) {
+              try {
+                currentObjectURL = URL.createObjectURL(file);
+                mediaTitle.textContent = file.name;
+                
+                if (file.type.startsWith('image/')) {
+                  const img = document.createElement('img');
+                  img.src = currentObjectURL;
+                  img.className = 'max-w-full max-h-full object-contain';
+                  mediaDisplay.appendChild(img);
+                  mediaTitle.textContent = file.name;
+
+                } else if (file.type.startsWith('audio/')) {
+                  const audio = document.createElement('audio');
+                  audio.src = currentObjectURL;
+                  audio.controls = true;
+                  audio.className = 'w-full mt-4';
+                  mediaDisplay.innerHTML = `<span class="material-icons-outlined text-9xl text-primary-container">music_note</span>`;
+                  mediaDisplay.appendChild(audio);
+                  mediaTitle.textContent = file.name;
+
+                } else if (file.type.startsWith('video/')) {
+                  const video = document.createElement('video');
+                  video.src = currentObjectURL;
+                  video.controls = true;
+                  video.className = 'max-w-full max-h-full';
+                  mediaDisplay.appendChild(video);
+                  mediaTitle.textContent = file.name;
+                
+                } else {
+                  mediaDisplay.innerHTML = `<span class="material-icons-outlined text-9xl text-error">error</span>`;
+                  mediaTitle.textContent = 'Unsupported file type';
+                }
+                
+                const closeBtn = windowEl.querySelector('.close-btn');
+                const closeHandler = () => {
+                  if (currentObjectURL) {
+                    URL.revokeObjectURL(currentObjectURL);
+                  }
+                  closeBtn.removeEventListener('click', closeHandler);
+                };
+                closeBtn.addEventListener('click', closeHandler);
+
+              } catch (error) {
+                console.error("Error loading media file:", error);
+                mediaTitle.textContent = 'Error loading file';
+              }
+            } else {
+              mediaDisplay.innerHTML = `<span class="material-icons-outlined text-9xl text-primary-container">perm_media</span>`;
+              mediaTitle.textContent = 'No media loaded';
+            }
+          });
+        }
+
+        function initWeather(windowEl) {
+          const content = windowEl.querySelector('.window-content');
+          content.style.overflow = 'hidden';
+
+          const script = document.createElement('script');
+          script.innerHTML = `
+            !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='https://weatherwidget.io/js/widget.min.js';fjs.parentNode.insertBefore(js,fjs);}}(document,'script','weatherwidget-io-js');
+          `;
+          content.appendChild(script);
+        }
+
+        function initPDFReader(windowEl) {
+          const content = windowEl.querySelector('.window-content');
+          content.style.overflow = 'hidden';
+          
+          const fileInput = windowEl.querySelector('#pdf-file-upload');
+          const fileLabel = windowEl.querySelector('label[for="pdf-file-upload"]');
+          const displayArea = windowEl.querySelector('.pdf-display-area');
+          
+          let currentObjectURL = null;
+
+          const uniqueId = 'pdf-file-upload-' + Date.now();
+          fileInput.id = uniqueId;
+          fileLabel.htmlFor = uniqueId;
+
+          fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            
+            if (currentObjectURL) {
+              URL.revokeObjectURL(currentObjectURL);
+              currentObjectURL = null;
+            }
+            displayArea.innerHTML = '';
+
+            if (file && file.type === 'application/pdf') {
+              try {
+                currentObjectURL = URL.createObjectURL(file);
+                
+                const embed = document.createElement('embed');
+                embed.src = currentObjectURL;
+                embed.type = "application/pdf";
+                embed.className = "w-full h-full";
+                
+                displayArea.appendChild(embed);
+
+              } catch (error) {
+                console.error("Error loading PDF file:", error);
+                displayArea.innerHTML = '<p class="text-error">Error loading PDF file.</p>';
+              }
+            } else if (file) {
+              displayArea.innerHTML = '<p class="text-error">Error: Please select a valid PDF file.</p>';
+            }
+          });
+
+          windowEl.querySelector('.close-btn').addEventListener('click', () => {
+            if (currentObjectURL) {
+              URL.revokeObjectURL(currentObjectURL);
+            }
+          });
+        }
+
+        // --- ADDED: 14. Lume Doodles App Logic ---
+        function initLumeDoodles(windowEl) {
+          const content = windowEl.querySelector('.window-content');
+          content.style.overflow = 'hidden'; // Let the app's internal containers scroll
+          
+          const canvas = windowEl.querySelector('#doodle-canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Toolbar controls
+          const toolButtons = windowEl.querySelectorAll('.doodle-tool');
+          const colorPicker = windowEl.querySelector('#doodle-color');
+          const sizeSlider = windowEl.querySelector('#doodle-size');
+          const fillButton = windowEl.querySelector('#doodle-fill');
+          const imageUpload = windowEl.querySelector('#doodle-image-upload');
+          const clearButton = windowEl.querySelector('#doodle-clear');
+          const downloadButton = windowEl.querySelector('#doodle-download');
+
+          let isDrawing = false;
+          let currentTool = 'pencil';
+          
+          // Set initial context styles
+          ctx.strokeStyle = colorPicker.value;
+          ctx.fillStyle = colorPicker.value;
+          ctx.lineWidth = sizeSlider.value;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          // --- Event Listeners ---
+          
+          function startDrawing(e) {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+          }
+
+          function draw(e) {
+            if (!isDrawing) return;
+            
+            // Set tool properties every time in case they changed
+            if (currentTool === 'pencil') {
+              ctx.globalCompositeOperation = 'source-over';
+              ctx.strokeStyle = colorPicker.value;
+            } else if (currentTool === 'eraser') {
+              ctx.globalCompositeOperation = 'destination-out';
+            }
+            ctx.lineWidth = sizeSlider.value;
+            
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+          }
+
+          function stopDrawing() {
+            isDrawing = false;
+            ctx.closePath();
+          }
+          
+          canvas.addEventListener('mousedown', startDrawing);
+          canvas.addEventListener('mousemove', draw);
+          canvas.addEventListener('mouseup', stopDrawing);
+          canvas.addEventListener('mouseout', stopDrawing);
+
+          // --- Toolbar Functions ---
+          
+          toolButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              // Remove active class from all
+              toolButtons.forEach(btn => btn.classList.remove('bg-secondary-container'));
+              // Add active class to clicked
+              button.classList.add('bg-secondary-container');
+              // Set tool
+              currentTool = button.dataset.tool;
+            });
+          });
+
+          colorPicker.addEventListener('change', (e) => {
+            ctx.strokeStyle = e.target.value;
+            ctx.fillStyle = e.target.value;
+          });
+          
+          sizeSlider.addEventListener('input', (e) => {
+            ctx.lineWidth = e.target.value;
+          });
+
+          fillButton.addEventListener('click', () => {
+            ctx.fillStyle = colorPicker.value; // Get current color
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          });
+          
+          clearButton.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          });
+          
+          downloadButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'lume-doodle.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+          });
+          
+          imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const img = new Image();
+              img.onload = () => {
+                // Draw image, scaling it to fit while maintaining aspect ratio
+                const hRatio = canvas.width / img.width;
+                const vRatio = canvas.height / img.height;
+                const ratio = Math.min(hRatio, vRatio);
+                const centerShiftX = (canvas.width - img.width * ratio) / 2;
+                const centerShiftY = (canvas.height - img.height * ratio) / 2;
+                ctx.drawImage(img, 0, 0, img.width, img.height, 
+                              centerShiftX, centerShiftY, img.width * ratio, img.height * ratio);
+              };
+              img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+            
+            // Reset input so user can load same file twice
+            e.target.value = null;
+          });
+        }
+
+        initDB();
+        
+      });
+    </script>
+</body>
+</html>
